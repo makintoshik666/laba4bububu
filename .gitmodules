@@ -1,0 +1,3 @@
+[submodule "ContentSharedAssets"]
+	path = ContentSharedAssets
+	url = https://github.com/Rufik27/ue_shared_assets.git
