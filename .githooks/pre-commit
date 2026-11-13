@@ -1,0 +1,35 @@
+#!/bin/sh
+# pre-commit: blocks junk folders and big files outside LFS
+
+MAX_SIZE=$((50 * 1024 * 1024))
+
+git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMR | {
+  ERRORS=0
+  while IFS= read -r f; do
+    case "$f" in
+      Saved/*|*/Saved/*|Intermediate/*|*/Intermediate/*|Binaries/*|*/Binaries/*|DerivedDataCache/*|*/DerivedDataCache/*|.vs/*|*/.vs/*)
+        echo "ERROR: file from a forbidden folder: $f"
+        ERRORS=1
+        continue
+        ;;
+    esac
+    if [ -f "$f" ]; then
+      SIZE=$(wc -c < "$f" | tr -d ' ')
+      if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+        FILTER=$(git check-attr filter -- "$f" | awk '{print $NF}')
+        if [ "$FILTER" != "lfs" ]; then
+          echo "ERROR: file is bigger than 50 MB and is not tracked by LFS: $f"
+          ERRORS=1
+        fi
+      fi
+    fi
+  done
+  exit $ERRORS
+}
+RESULT=$?
+
+if [ "$RESULT" -ne 0 ]; then
+  echo "Commit rejected. Fix the problems above."
+  exit 1
+fi
+exit 0
